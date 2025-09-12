@@ -1,126 +1,189 @@
-# Recycle Tracker
+# ecycle-tracker
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
 
-## Project Description
-
-Recycle Tracker is a blockchain-based smart contract system designed to incentivize and track recycling activities. The platform allows users to record their recycling activities, earn tokens as rewards, and redeem those tokens for various benefits. By leveraging blockchain technology, the system ensures transparency, immutability, and trust in recycling data while promoting environmental sustainability.
-
-The smart contract manages recycling records, verifies activities through authorized personnel, and maintains a token-based reward system that encourages continued participation in recycling programs.
-
-## Project Vision
-
-Our vision is to create a transparent, decentralized ecosystem that motivates individuals and communities to actively participate in recycling activities. By combining blockchain technology with environmental sustainability, we aim to:
-
-- **Foster Environmental Responsibility**: Encourage widespread adoption of recycling practices through tangible rewards
-- **Build Trust and Transparency**: Utilize blockchain's immutable ledger to create verifiable recycling records
-- **Create Economic Incentives**: Establish a token-based economy that makes recycling financially rewarding
-- **Scale Global Impact**: Provide a framework that can be adopted worldwide to track and incentivize recycling efforts
-- **Bridge Technology and Sustainability**: Demonstrate how blockchain can solve real-world environmental challenges
-
-## Key Features
-
-### 🔄 **Recycling Activity Recording**
-- Users can log recycling activities with material type and quantity
-- Supports multiple material types: plastic, paper, glass, metal, and electronics
-- Automatic timestamp recording for audit trails
-- Real-time token calculation based on recycled weight
-
-### ✅ **Verification System**
-- Authorized personnel can verify recorded recycling activities
-- Prevents fraud and ensures data accuracy
-- Verification status tracking for each record
-- Event logging for transparency
-
-### 🪙 **Token Reward System**
-- Automatic token allocation (1 token per gram recycled)
-- Token balance tracking for each user
-- Redemption mechanism for earned tokens
-- Integration-ready for reward marketplace
-
-### 📊 **Comprehensive Analytics**
-- Individual user statistics (total records, weight, tokens)
-- System-wide recycling metrics
-- User activity history and record retrieval
-- Performance tracking and monitoring
-
-### 🔐 **Security & Access Control**
-- Owner-only administrative functions
-- Input validation and error handling
-- Material type validation system
-- Secure token management
-
-### 🌱 **Extensibility**
-- Support for adding new recyclable materials
-- Modular design for future enhancements
-- Event-driven architecture for integration
-- Scalable data structures
-
-## Future Scope
-
-### Phase 1 - Enhanced Features
-- **Multi-tier Verification**: Implement community-based verification alongside administrative verification
-- **Dynamic Token Rates**: Variable token rates based on material type and market demand
-- **Location Tracking**: GPS integration for recycling location verification
-- **Mobile App Integration**: Develop mobile applications for easy activity logging
-
-### Phase 2 - Ecosystem Expansion
-- **Reward Marketplace**: Build a comprehensive marketplace where tokens can be redeemed for:
-  - Discount coupons from eco-friendly brands
-  - Environmental certification credits
-  - Charitable donations to environmental causes
-  - Exclusive access to sustainability events
-- **Corporate Partnerships**: Integrate with businesses for employee recycling programs
-- **Educational Platform**: Add learning modules about recycling and sustainability
-
-### Phase 3 - Advanced Technology Integration
-- **IoT Device Integration**: Connect with smart bins and weighing systems for automatic data collection
-- **AI-Powered Verification**: Implement machine learning for automated verification of recycling activities
-- **Cross-chain Compatibility**: Enable token transfers across different blockchain networks
-- **Carbon Credit Integration**: Link recycling activities to carbon credit generation
-
-### Phase 4 - Global Scale Features
-- **Multi-language Support**: Localization for global adoption
-- **Government Integration**: Collaborate with municipal waste management systems
-- **Data Analytics Dashboard**: Advanced analytics for environmental impact assessment
-- **Community Challenges**: Gamification features with recycling competitions and leaderboards
-
-### Phase 5 - Sustainability Innovation
-- **Circular Economy Features**: Track product lifecycle and material reuse
-- **Supply Chain Integration**: Connect with manufacturers for sustainable packaging initiatives
-- **Research Data Platform**: Provide anonymized data for environmental research
-- **Policy Compliance Tools**: Help organizations meet environmental regulations
-
----
-
-## Getting Started
-
-### Prerequisites
-- Solidity ^0.8.19
-- Ethereum development environment (Hardhat, Truffle, or Remix)
-- Web3 wallet (MetaMask recommended)
-
-### Deployment
-1. Compile the smart contract using your preferred development environment
-2. Deploy to your chosen Ethereum network (testnet recommended for testing)
-3. Interact with the contract using Web3 libraries or DApp interfaces
-
-### Usage Examples
-```solidity
-// Record recycling activity
-recycleTracker.recordRecycling("plastic", 500); // 500 grams of plastic
-
-// Verify a record (owner only)
-recycleTracker.verifyRecord(1);
-
-// Redeem tokens
-recycleTracker.redeemTokens(100);
-
-// Check user statistics
-recycleTracker.getUserStats(userAddress);
-##contract##
-"C:\Users\paila\OneDrive\画像\Screenshots 1\Screenshot 2025-09-10 120201.png"
-
-```
-
----
-
-**Join us in building a sustainable future through blockchain technology! 🌍♻️**
+/**
+ * @title RecycleTracker
+ * @dev A smart contract to track recycling activities and reward users
+ */
+contract RecycleTracker {
+    
+    // Struct to represent a recycling record
+    struct RecyclingRecord {
+        uint256 id;
+        address user;
+        string materialType;
+        uint256 quantity; // in grams
+        uint256 timestamp;
+        uint256 rewardTokens;
+        bool verified;
+    }
+    
+    // State variables
+    address public owner;
+    uint256 private recordCounter;
+    uint256 public totalRecycledWeight;
+    uint256 public constant TOKENS_PER_GRAM = 1; // 1 token per gram recycled
+    
+    // Mappings
+    mapping(uint256 => RecyclingRecord) public recyclingRecords;
+    mapping(address => uint256) public userTokenBalances;
+    mapping(address => uint256[]) public userRecordIds;
+    mapping(string => bool) public supportedMaterials;
+    
+    // Events
+    event RecyclingRecorded(
+        uint256 indexed recordId,
+        address indexed user,
+        string materialType,
+        uint256 quantity,
+        uint256 rewardTokens
+    );
+    
+    event RecordVerified(uint256 indexed recordId, address indexed verifier);
+    event TokensRedeemed(address indexed user, uint256 amount);
+    event MaterialAdded(string materialType);
+    
+    // Modifiers
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can perform this action");
+        _;
+    }
+    
+    modifier validMaterial(string memory _materialType) {
+        require(supportedMaterials[_materialType], "Material type not supported");
+        _;
+    }
+    
+    /**
+     * @dev Constructor to initialize the contract
+     */
+    constructor() {
+        owner = msg.sender;
+        recordCounter = 0;
+        totalRecycledWeight = 0;
+        
+        // Initialize supported materials
+        supportedMaterials["plastic"] = true;
+        supportedMaterials["paper"] = true;
+        supportedMaterials["glass"] = true;
+        supportedMaterials["metal"] = true;
+        supportedMaterials["electronic"] = true;
+    }
+    
+    /**
+     * @dev Core Function 1: Record recycling activity
+     * @param _materialType Type of material being recycled
+     * @param _quantity Quantity in grams
+     */
+    function recordRecycling(
+        string memory _materialType,
+        uint256 _quantity
+    ) public validMaterial(_materialType) {
+        require(_quantity > 0, "Quantity must be greater than zero");
+        
+        recordCounter++;
+        uint256 rewardTokens = _quantity * TOKENS_PER_GRAM;
+        
+        // Create recycling record
+        recyclingRecords[recordCounter] = RecyclingRecord({
+            id: recordCounter,
+            user: msg.sender,
+            materialType: _materialType,
+            quantity: _quantity,
+            timestamp: block.timestamp,
+            rewardTokens: rewardTokens,
+            verified: false
+        });
+        
+        // Update user records
+        userRecordIds[msg.sender].push(recordCounter);
+        
+        // Award tokens (pending verification)
+        userTokenBalances[msg.sender] += rewardTokens;
+        totalRecycledWeight += _quantity;
+        
+        emit RecyclingRecorded(recordCounter, msg.sender, _materialType, _quantity, rewardTokens);
+    }
+    
+    /**
+     * @dev Core Function 2: Verify recycling record (by authorized personnel)
+     * @param _recordId ID of the record to verify
+     */
+    function verifyRecord(uint256 _recordId) public onlyOwner {
+        require(_recordId > 0 && _recordId <= recordCounter, "Invalid record ID");
+        require(!recyclingRecords[_recordId].verified, "Record already verified");
+        
+        recyclingRecords[_recordId].verified = true;
+        
+        emit RecordVerified(_recordId, msg.sender);
+    }
+    
+    /**
+     * @dev Core Function 3: Redeem tokens for rewards
+     * @param _amount Amount of tokens to redeem
+     */
+    function redeemTokens(uint256 _amount) public {
+        require(_amount > 0, "Amount must be greater than zero");
+        require(userTokenBalances[msg.sender] >= _amount, "Insufficient token balance");
+        
+        // Deduct tokens from user balance
+        userTokenBalances[msg.sender] -= _amount;
+        
+        // In a real implementation, this would trigger actual reward distribution
+        // For now, we just emit an event
+        emit TokensRedeemed(msg.sender, _amount);
+    }
+    
+    /**
+     * @dev Get user's recycling statistics
+     * @param _user Address of the user
+     * @return totalRecords Total number of records
+     * @return totalWeight Total weight recycled
+     * @return tokenBalance Current token balance
+     */
+    function getUserStats(address _user) 
+        public 
+        view 
+        returns (
+            uint256 totalRecords,
+            uint256 totalWeight,
+            uint256 tokenBalance
+        ) 
+    {
+        totalRecords = userRecordIds[_user].length;
+        tokenBalance = userTokenBalances[_user];
+        
+        // Calculate total weight for user
+        for (uint256 i = 0; i < userRecordIds[_user].length; i++) {
+            uint256 recordId = userRecordIds[_user][i];
+            totalWeight += recyclingRecords[recordId].quantity;
+        }
+    }
+    
+    /**
+     * @dev Add new supported material type (only owner)
+     * @param _materialType New material type to support
+     */
+    function addSupportedMaterial(string memory _materialType) public onlyOwner {
+        supportedMaterials[_materialType] = true;
+        emit MaterialAdded(_materialType);
+    }
+    
+    /**
+     * @dev Get all record IDs for a user
+     * @param _user Address of the user
+     * @return Array of record IDs
+     */
+    function getUserRecords(address _user) public view returns (uint256[] memory) {
+        return userRecordIds[_user];
+    }
+    
+    /**
+     * @dev Get total number of records in the system
+     * @return Total number of recycling records
+     */
+    function getTotalRecords() public view returns (uint256) {
+        return recordCounter;
+    }
+}
