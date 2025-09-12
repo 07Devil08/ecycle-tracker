@@ -188,3 +188,5 @@ contract RecycleTracker {
     }
 }
 
+##contract
+<img width="1778" height="855" alt="Screenshot 2025-09-10 120201" src="https://github.com/user-attachments/assets/815bfb41-ce04-4062-93f3-7498114f307d" />
