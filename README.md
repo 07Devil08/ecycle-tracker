@@ -187,3 +187,4 @@ contract RecycleTracker {
         return recordCounter;
     }
 }
+
